@@ -10,7 +10,11 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = Gitnoter
 TEMPLATE = app
-CONFIG += c++11
+
+# Modern toolchains/Qt versions increasingly assume at least C++17.
+# This is a build-compatibility update; it does not change runtime behavior.
+CONFIG += c++17
+
 ICON = Gitnoter.icns
 RC_FILE = Gitnoter.rc
 CODECFORTR = UTF-8
@@ -66,4 +70,3 @@ RESOURCES += \
 ## DEPENDENCIES
 #
 include(3rdparty/3rdparty.pri)
-

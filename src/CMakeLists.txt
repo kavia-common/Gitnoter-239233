@@ -1,12 +1,22 @@
-cmake_minimum_required(VERSION 2.8.12)
-project(GitNoteR-Qt-Desktop)
+cmake_minimum_required(VERSION 3.16)
 
-#set(CMAKE_AUTOUIC ON)
+project(Gitnoter-Qt-Desktop LANGUAGES CXX)
+
+# Keep this project building with modern toolchains while still supporting Qt5.
+# - We prefer Qt6 when available, otherwise fall back to Qt5.
+# - We avoid running platform-specific binary patching at *configure time* (it breaks CI/cross-platform builds).
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(Qt5 COMPONENTS Core Gui Widgets Network PrintSupport Xml XmlPatterns REQUIRED)
+# Qt discovery (Qt6 first, then Qt5)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Network PrintSupport Xml XmlPatterns)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Network PrintSupport Xml XmlPatterns)
 
 #
 # https://github.com/hoedown/hoedown
@@ -15,56 +25,61 @@ include_directories(${PROJECT_SOURCE_DIR}/3rdparty/hoedown)
 aux_source_directory(${PROJECT_SOURCE_DIR}/3rdparty/hoedown HOEDOWN)
 
 #
-# https://github.com/nlohmann/json
+# https://github.com/nlohmann/json (vendored here)
 #
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty/json)
 aux_source_directory(${PROJECT_SOURCE_DIR}/3rdparty/json JSON)
 
+#
+# https://github.com/Skycoder42/QTinyAes
+#
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty/qtinyaes)
 aux_source_directory(${PROJECT_SOURCE_DIR}/3rdparty/qtinyaes QTINYAES)
 
 #
-# https://github.com/falceeffect/UGlobalHotkey
-#
-#include_directories(${PROJECT_SOURCE_DIR}/3rdparty/UGlobalHotkey)
-#aux_source_directory(${PROJECT_SOURCE_DIR}/3rdparty/UGlobalHotkey UGlOBLEHOTKEY)
-
-#
 # https://github.com/HSAnet/qt-google-analytics
-# Qt5 classes for providing Google analytics usage in a Qt/QtQuick application
 #
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty/qt-google-analytics)
 aux_source_directory(${PROJECT_SOURCE_DIR}/3rdparty/qt-google-analytics QtGoogleAnalytics)
 
 #
-# https://github.com/stsoor/LibGit2Wrapper
+# https://github.com/stsoor/LibGit2Wrapper (vendored wrapper sources)
 #
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty/LibGit2Wrapper)
 aux_source_directory(${PROJECT_SOURCE_DIR}/3rdparty/LibGit2Wrapper LibGit2Wrapper)
 
 #
 # https://github.com/buzzySmile/qBreakpad
-# Cross-platform Qt crash handler, implemented as wrapper around google-breakpad
 #
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty/qBreakpad/handler)
 link_directories(${PROJECT_SOURCE_DIR}/3rdparty/qBreakpad/handler)
-find_library(qBreakpad libqBreakpad)
-if (APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -framework AppKit")
-    execute_process(COMMAND install_name_tool -id @executable_path/../3rdparty/libgit2/lib/libgit2.24.dylib ${PROJECT_SOURCE_DIR}/3rdparty/libgit2/lib/libgit2.dylib)
+
+# Note: the actual library name can vary per platform/toolchain; we try common names.
+find_library(QBREAKPAD_LIB
+    NAMES qBreakpad libqBreakpad
+    PATHS ${PROJECT_SOURCE_DIR}/3rdparty/qBreakpad/handler
+)
+if(NOT QBREAKPAD_LIB)
+    message(WARNING "qBreakpad library not found in 3rdparty/qBreakpad/handler. Crash reporting will fail to link unless provided.")
 endif()
 
 #
-# https://github.com/libgit2/libgit2
-# A cross-platform, linkable library implementation of Git that you can use in your application.
+# https://github.com/libgit2/libgit2 (vendored binary libs + headers)
 #
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty/libgit2/include)
 link_directories(${PROJECT_SOURCE_DIR}/3rdparty/libgit2/lib)
-find_library(git2 libigt2)
+
+# Fix: previous config attempted to find 'libigt2' (typo). The correct library is libgit2.
+find_library(LIBGIT2_LIB
+    NAMES git2 libgit2 libgit2.so libgit2.dylib
+    PATHS ${PROJECT_SOURCE_DIR}/3rdparty/libgit2/lib
+)
+if(NOT LIBGIT2_LIB)
+    message(WARNING "libgit2 not found in 3rdparty/libgit2/lib. Git features will fail to link unless provided.")
+endif()
 
 #
-# https://github.com/pbek/qmarkdowntextedit
-# markdown editor
+# https://github.com/pbek/qmarkdowntextedit (vendored sources)
 #
 set(SOURCES_QMARKDOWNTEXTEDIT
     ${PROJECT_SOURCE_DIR}/3rdparty/qmarkdowntextedit/markdownhighlighter.cpp
@@ -73,20 +88,22 @@ set(SOURCES_QMARKDOWNTEXTEDIT
     ${PROJECT_SOURCE_DIR}/3rdparty/qmarkdowntextedit/markdownhighlighter.h
     ${PROJECT_SOURCE_DIR}/3rdparty/qmarkdowntextedit/qmarkdowntextedit.h
     ${PROJECT_SOURCE_DIR}/3rdparty/qmarkdowntextedit/qplaintexteditsearchwidget.h
-    ${PROJECT_SOURCE_DIR}/3rdparty/qmarkdowntextedit/media.qrc)
+    ${PROJECT_SOURCE_DIR}/3rdparty/qmarkdowntextedit/media.qrc
+)
 set(UIS_QMARKDOWNTEXTEDIT
-    ${PROJECT_SOURCE_DIR}/3rdparty/qmarkdowntextedit/qplaintexteditsearchwidget.ui)
+    ${PROJECT_SOURCE_DIR}/3rdparty/qmarkdowntextedit/qplaintexteditsearchwidget.ui
+)
 
 #
-# https://github.com/DOOMer/qkeysequencewidget
-# Qt widget for create key sequences
+# https://github.com/DOOMer/qkeysequencewidget (vendored sources)
 #
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty/qkeysequencewidget/src)
 set(SOURCES_QKEYSEQUENCEWIDGET
     ${PROJECT_SOURCE_DIR}/3rdparty/qkeysequencewidget/src/qkeysequencewidget.cpp
     ${PROJECT_SOURCE_DIR}/3rdparty/qkeysequencewidget/src/qkeysequencewidget.h
     ${PROJECT_SOURCE_DIR}/3rdparty/qkeysequencewidget/src/qkeysequencewidget_p.h
-    ${PROJECT_SOURCE_DIR}/3rdparty/qkeysequencewidget/qkeysequencewidget.qrc)
+    ${PROJECT_SOURCE_DIR}/3rdparty/qkeysequencewidget/qkeysequencewidget.qrc
+)
 
 #
 # App sources
@@ -102,12 +119,11 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/helps SOURCES_HELPS)
 
 file(GLOB_RECURSE UIS_APP ${PROJECT_SOURCE_DIR}/views/*.ui)
 
-#
 # Build Qt UIs to headers
-#
 qt5_wrap_ui(HEADERS_UIS
     ${UIS_APP}
-    ${UIS_QMARKDOWNTEXTEDIT})
+    ${UIS_QMARKDOWNTEXTEDIT}
+)
 
 add_executable(${PROJECT_NAME}
     main.cpp
@@ -120,15 +136,28 @@ add_executable(${PROJECT_NAME}
     ${HOEDOWN} ${JSON} ${QTINYAES} ${QtGoogleAnalytics} ${LibGit2Wrapper}
     ${SOURCES_QMARKDOWNTEXTEDIT}
     ${SOURCES_QKEYSEQUENCEWIDGET}
-    resources/resources.qrc)
+    resources/resources.qrc
+)
 
-target_link_libraries(${PROJECT_NAME}
-    Qt5::Core
-    Qt5::Gui
-    Qt5::Widgets
-    Qt5::Network
-    Qt5::PrintSupport
-    Qt5::Xml
-    Qt5::XmlPatterns
-    git2
-    qBreakpad)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Gui
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::PrintSupport
+    Qt${QT_VERSION_MAJOR}::Xml
+    Qt${QT_VERSION_MAJOR}::XmlPatterns
+)
+
+if(LIBGIT2_LIB)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBGIT2_LIB})
+endif()
+
+if(QBREAKPAD_LIB)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${QBREAKPAD_LIB})
+endif()
+
+# macOS: link AppKit when building with Apple toolchains
+if(APPLE)
+    target_link_libraries(${PROJECT_NAME} PRIVATE "-framework AppKit")
+endif()

@@ -6,3 +6,4 @@
 *.dmg
 build-*
 packages/*
+.file_activity_report.json
