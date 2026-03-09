@@ -4,7 +4,15 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network printsupport xml xmlpatterns
+QT       += core gui network printsupport xml
+
+# XmlPatterns is an optional Qt module and is not installed in all Qt dev environments.
+# Do not hard-require it, or qmake builds (and CI) will fail.
+qtHaveModule(xmlpatterns) {
+    QT += xmlpatterns
+} else {
+    message("XmlPatterns module not available; continuing without it.")
+}
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 

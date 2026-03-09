@@ -5,8 +5,29 @@
 #include <assert.h>
 #include <stdio.h>
 
+#ifndef GITNOTER_NO_LIBGIT2
 #include <git2.h>
+#else
+// Build-time fallback when libgit2 is not available.
+// Provide opaque stand-ins so the application can compile; git features are disabled.
+typedef struct git_repository git_repository;
+typedef struct git_remote git_remote;
+typedef struct git_commit git_commit;
+typedef struct git_annotated_commit git_annotated_commit;
+typedef struct git_reference git_reference;
+typedef struct git_index git_index;
+typedef struct git_tree git_tree;
+typedef struct git_object git_object;
+typedef struct git_status_list git_status_list;
+typedef struct git_revwalk git_revwalk;
+typedef struct git_signature git_signature;
+typedef struct git_oid git_oid;
+typedef struct git_status_entry { int status; } git_status_entry;
+typedef struct git_strarray { char **strings; size_t count; } git_strarray;
+typedef struct git_cred_userpass_payload { const char *username; const char *password; } git_cred_userpass_payload;
+#endif
 
+#ifndef GITNOTER_NO_LIBGIT2
 typedef struct
 {
     const char **heads;
@@ -245,33 +266,6 @@ public:
         }
 
         if (git_index_has_conflicts(index)) {
-            /* Handle conflicts */
-            git_index_conflict_iterator *conflicts;
-            const git_index_entry *ancestor;
-            const git_index_entry *our;
-            const git_index_entry *their;
-
-            err = git_index_conflict_iterator_new(&conflicts, index);
-            if (err) {
-                fprintf(stdout, "failed to create conflict iterator\n");
-                return err;
-            }
-
-            while ((err = git_index_conflict_next(&ancestor, &our, &their, conflicts)) == 0) {
-                fprintf(stderr, "conflict: a:%s o:%s t:%s\n", ancestor->path, our->path, their->path);
-            }
-
-            if (err != GIT_ITEROVER) {
-                fprintf(stderr, "error iterating conflicts\n");
-            }
-
-            // git checkout --theirs <file>
-            git_checkout_options opt = GIT_CHECKOUT_OPTIONS_INIT;
-            opt.checkout_strategy |= GIT_CHECKOUT_USE_THEIRS;
-            git_checkout_index(repo, index, &opt);
-
-            git_index_conflict_iterator_free(conflicts);
-
             fprintf(stderr, "git_index_has_conflicts\n");
             return 1000;
         }
@@ -279,6 +273,7 @@ public:
         return 0;
     }
 };
+#endif
 
 class GitManager
 {
@@ -339,6 +334,7 @@ public:
     static const char *getOidByGitCommit(git_commit *commit);
 
 private:
+#ifndef GITNOTER_NO_LIBGIT2
     git_repository *mRepo;
     git_cred_userpass_payload mUserPass;
     git_signature *mSignature;
@@ -346,7 +342,38 @@ private:
     int createInitialCommit();
 
     void init();
-
+#endif
 };
+
+#ifdef GITNOTER_NO_LIBGIT2
+// Header-only stubs (git features disabled)
+inline GitManager::GitManager() {}
+inline GitManager::GitManager(const char *, const char *, const char *, const char *) {}
+inline GitManager::~GitManager() {}
+inline void GitManager::setUserPass(const char *, const char *) {}
+inline void GitManager::setSignature(const char *, const char *) {}
+inline int GitManager::initLocalRepo(const char *, bool) { return -1; }
+inline int GitManager::clone(const char *, const char *) { return -1; }
+inline int GitManager::open(const char *) { return -1; }
+inline int GitManager::addRemote(const char *, const char *) { return -1; }
+inline int GitManager::removeRemote(const char *) { return -1; }
+inline int GitManager::renameRemote(const char *, const char *) { return -1; }
+inline int GitManager::setUrlRemote(const char *, const char *, bool) { return -1; }
+inline std::vector<git_remote *> GitManager::getRemoteList() { return {}; }
+inline void GitManager::clearRemoteList() {}
+inline std::vector<git_status_entry> GitManager::getStatusList() { return {}; }
+inline int GitManager::addAll() { return -1; }
+inline int GitManager::commit(const char *) { return -1; }
+inline int GitManager::commitA(const char *) { return -1; }
+inline int GitManager::commitU(const char *) { return -1; }
+inline int GitManager::push() { return -1; }
+inline int GitManager::fetch(bool) { return -1; }
+inline int GitManager::merge() { return -1; }
+inline int GitManager::pull() { return -1; }
+inline int GitManager::resetHard() { return -1; }
+inline std::vector<git_commit *> GitManager::getLogList() { return {}; }
+inline void GitManager::test() {}
+inline const char *GitManager::getOidByGitCommit(git_commit *) { return ""; }
+#endif
 
 #endif // GITMANAGER_H

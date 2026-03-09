@@ -3,7 +3,9 @@
 #include "tools.h"
 #include "version.h"
 
+#if !defined(GITNOTER_NO_BREAKPAD)
 #include <QBreakpadHandler.h>
+#endif
 
 #include <QApplication>
 
@@ -39,7 +41,7 @@ int main(int argc, char *argv[])
 
     qApp->setStyleSheet(qApp->styleSheet() + Tools::readerFileString(":/theme/default.qss"));
 
-#if defined(QT_NO_DEBUG)
+#if defined(QT_NO_DEBUG) && !defined(GITNOTER_NO_BREAKPAD)
     QBreakpadInstance.setDumpPath(__CRASHES_PATH__);
 
     QStringList crashDumpList = QBreakpadInstance.dumpFileList();

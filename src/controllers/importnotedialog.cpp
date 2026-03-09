@@ -1,4 +1,4 @@
-﻿#include "ui_importnotedialog.h"
+#include "ui_importnotedialog.h"
 
 #include "importnotedialog.h"
 #include "tools.h"
@@ -6,6 +6,7 @@
 #include "globals.h"
 
 #include <QFileDialog>
+#include <QMessageBox>
 
 ImportNoteDialog::ImportNoteDialog(QWidget *parent) :
     QDialog(parent),
@@ -45,6 +46,12 @@ void ImportNoteDialog::init()
 
 void ImportNoteDialog::initProgressBar(QString data)
 {
+#ifndef QT_XMLPATTERNS_LIB
+    Q_UNUSED(data);
+    ui->progressBar->setValue(0);
+    ui->progressBar->setMaximum(0);
+    return;
+#else
     QXmlQuery query;
     query.setFocus(data);
     query.setQuery("en-export/note");
@@ -61,11 +68,25 @@ void ImportNoteDialog::initProgressBar(QString data)
 
     ui->progressBar->setValue(0);
     ui->progressBar->setMaximum(count);
+#endif
 }
-
 
 void ImportNoteDialog::importNotes(QString data)
 {
+#ifndef QT_XMLPATTERNS_LIB
+    Q_UNUSED(data);
+
+    // Keep the application buildable even without the optional QtXmlPatterns module.
+    // The Evernote .enex import feature depends on QXmlQuery (XQuery) from XmlPatterns.
+    QMessageBox::information(
+        this,
+        tr("Import not available"),
+        tr("Evernote ENEX import requires the optional Qt XmlPatterns module, which is not available in this build.")
+    );
+
+    ui->buttonBox->setEnabled(true);
+    return;
+#else
     QXmlQuery query;
     query.setFocus(data);
     query.setQuery("en-export/note");
@@ -106,9 +127,9 @@ void ImportNoteDialog::importNotes(QString data)
             // add a linebreak instead of div-containers
             content.replace(QRegularExpression("<\\/div>"), "\n");
 
-            content = NoteModel::htmlToMarkdown(content);       // convert html tags to markdown
-            content = importImages(noteModel, content, query);  // import images
-            content = importAttachments(noteModel, content, query); // import attachments
+            content = NoteModel::htmlToMarkdown(content);              // convert html tags to markdown
+            content = importImages(noteModel, content, query);         // import images
+            content = importAttachments(noteModel, content, query);    // import attachments
 
             // remove all html tags
             content.remove(QRegularExpression("<.+?>"));
@@ -150,8 +171,10 @@ void ImportNoteDialog::importNotes(QString data)
             qWarning() << "Error importing notes";
         }
     }
+#endif
 }
 
+#ifdef QT_XMLPATTERNS_LIB
 QString ImportNoteDialog::importImages(NoteModel *noteModel, QString content, QXmlQuery query)
 {
     query.setQuery("resource");
@@ -198,7 +221,7 @@ QString ImportNoteDialog::importImages(NoteModel *noteModel, QString content, QX
         recognition.replace("\\\"", "\"");
 
         match = QRegularExpression(
-                "objID=\"(.+?)\"",
+                "objID=\\\"(.+?)\\\"",
                 QRegularExpression::CaseInsensitiveOption)
                 .match(recognition);
 
@@ -231,7 +254,7 @@ QString ImportNoteDialog::importImages(NoteModel *noteModel, QString content, QX
     }
 
     // match image tags
-    QRegularExpression re("<en-media.+?type=\"image/.+?\".*?>",
+    QRegularExpression re("<en-media.+?type=\\\"image/.+?\\\".*?>",
                           QRegularExpression::CaseInsensitiveOption);
     QRegularExpressionMatchIterator i = re.globalMatch(content);
     QStringList importedObjectIds;
@@ -242,7 +265,7 @@ QString ImportNoteDialog::importImages(NoteModel *noteModel, QString content, QX
         QString imageTag = imageMatch.captured(0);
 
         // check for the hash
-        QRegularExpression re2("hash=\"(.+?)\"",
+        QRegularExpression re2("hash=\\\"(.+?)\\\"",
                                QRegularExpression::CaseInsensitiveOption);
         QRegularExpressionMatch hashMatch = re2.match(imageTag);
 
@@ -334,7 +357,7 @@ QString ImportNoteDialog::importAttachments(NoteModel *noteModel, QString conten
         recognition.replace("\\\"", "\"");
 
         match = QRegularExpression(
-                "objID=\"(.+?)\"",
+                "objID=\\\"(.+?)\\\"",
                 QRegularExpression::CaseInsensitiveOption)
                 .match(recognition);
 
@@ -378,7 +401,7 @@ QString ImportNoteDialog::importAttachments(NoteModel *noteModel, QString conten
     }
 
     // match media tags
-    QRegularExpression re("<en-media.+?type=\".+?\".*?>",
+    QRegularExpression re("<en-media.+?type=\\\".+?\\\".*?>",
                           QRegularExpression::CaseInsensitiveOption);
     QRegularExpressionMatchIterator i = re.globalMatch(content);
     QStringList importedObjectIds;
@@ -389,7 +412,7 @@ QString ImportNoteDialog::importAttachments(NoteModel *noteModel, QString conten
         QString mediaTag = imageMatch.captured(0);
 
         // check for the hash
-        QRegularExpression re2("hash=\"(.+?)\"",
+        QRegularExpression re2("hash=\\\"(.+?)\\\"",
                                QRegularExpression::CaseInsensitiveOption);
         QRegularExpressionMatch hashMatch = re2.match(mediaTag);
 
@@ -436,6 +459,7 @@ QString ImportNoteDialog::importAttachments(NoteModel *noteModel, QString conten
 
     return content;
 }
+#endif
 
 QString ImportNoteDialog::getMarkdownForMediaFileData(NoteModel *noteModel, MediaFileData &mediaFileData)
 {

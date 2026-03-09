@@ -4,8 +4,11 @@
 #include "notemodel.h"
 
 #include <QDialog>
+
+#ifdef QT_XMLPATTERNS_LIB
 #include <QXmlQuery>
 #include <QXmlResultItems>
+#endif
 
 namespace Ui {
 class ImportNoteDialog;
@@ -34,8 +37,10 @@ private:
     void initProgressBar(QString data);
     void importNotes(QString data);
 
+#ifdef QT_XMLPATTERNS_LIB
     QString importImages(NoteModel *noteModel, QString content, QXmlQuery query);
     QString importAttachments(NoteModel *noteModel, QString content, QXmlQuery query);
+#endif
 
     QString getMarkdownForMediaFileData(NoteModel *noteModel, MediaFileData &mediaFileData);
     QString getMarkdownForAttachmentFileData(NoteModel *noteModel, MediaFileData &mediaFileData);

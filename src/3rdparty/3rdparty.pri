@@ -48,4 +48,8 @@ include($$PWD/qBreakpad/qBreakpad.pri)
 #
 # https://github.com/stsoor/LibGit2Wrapper
 #
-include($$PWD/LibGit2Wrapper/LibGit2Wrapper.pri)
+!contains(DEFINES, GITNOTER_NO_LIBGIT2) {
+    include($$PWD/LibGit2Wrapper/LibGit2Wrapper.pri)
+} else {
+    message("LibGit2Wrapper disabled (no system libgit2)")
+}

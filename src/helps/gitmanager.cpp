@@ -1,3 +1,13 @@
+#if defined(GITNOTER_NO_LIBGIT2)
+
+#include "gitmanager.h"
+
+// libgit2 is disabled for this build (e.g., system libgit2 not found).
+// GitManager methods are provided as header-only stubs in gitmanager.h.
+// Keep this translation unit empty to avoid duplicate symbol definitions.
+
+#else
+
 #include "gitmanager.h"
 
 #include <string.h>
@@ -625,3 +635,5 @@ void GitManager::test()
 //    pull();
 //    printf("push: %i\n", push());
 }
+
+#endif // !defined(GITNOTER_NO_LIBGIT2)

@@ -4,6 +4,8 @@
 #include "LibGitException.h"
 #include "SmartLibGitHeapPointerTemplate.hpp"
 
+#include <stdexcept>
+
 using Commit = Git::Commit;
 using Repository = Git::Repository;
 

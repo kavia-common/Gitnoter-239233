@@ -6,6 +6,7 @@
 #include <memory>
 #include <map>
 #include <string>
+#include <vector>
 
 #include <git2.h>
 

@@ -15,8 +15,15 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # Qt discovery (Qt6 first, then Qt5)
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Network PrintSupport Xml XmlPatterns)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Network PrintSupport Xml XmlPatterns)
+#
+# XmlPatterns is an optional Qt module and is not always present in minimal Qt dev packages.
+# Hard-requiring it prevents CMake configure, which in turn blocks generating compile_commands.json
+# (and therefore blocks clang-tidy/cppcheck workflows).
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Network PrintSupport Xml)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Network PrintSupport Xml)
+
+# Optional components
+find_package(Qt${QT_VERSION_MAJOR} QUIET COMPONENTS XmlPatterns)
 
 #
 # https://github.com/hoedown/hoedown
@@ -146,8 +153,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt${QT_VERSION_MAJOR}::Network
     Qt${QT_VERSION_MAJOR}::PrintSupport
     Qt${QT_VERSION_MAJOR}::Xml
-    Qt${QT_VERSION_MAJOR}::XmlPatterns
 )
+
+if(TARGET Qt${QT_VERSION_MAJOR}::XmlPatterns)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::XmlPatterns)
+endif()
 
 if(LIBGIT2_LIB)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBGIT2_LIB})
